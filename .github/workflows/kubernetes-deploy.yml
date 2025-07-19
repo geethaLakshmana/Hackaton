@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - 'k8s/**' 
-      - '.github/workflows/03-kubernetes-deploy.yml'
+      - '.github/workflows/kubernetes-deploy.yml'
   workflow_dispatch:
 
 env:
@@ -54,4 +54,3 @@ jobs:
           kubectl apply -f k8s/service.yaml
           kubectl apply -f k8s/ingress.yaml
           echo "Kubernetes deployment applied successfully!"
-          
