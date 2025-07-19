@@ -1,5 +1,5 @@
 # Terraform generated files and directories
-.terraform/           # Terraform's working directory (contains plugins, modules cache)
+*/*.terraform/           # Terraform's working directory (contains plugins, modules cache)
 *.tfplan              # Saved plan files
 *.tfstate             # Local state file (CRITICAL: if using remote state, this is local and should always be ignored)
 *.tfstate.* # Backup local state files (e.g., .tfstate.backup, .tfstate.d)
