@@ -57,6 +57,7 @@ jobs:
 
       - name: Deploy to Kubernetes
         run: |
+          aws eks update-kubeconfig --name nodejs-eks-app-cluster --region us-west-1
           kubectl apply -f k8s/deployment.yaml
           kubectl apply -f k8s/service.yaml
           kubectl apply -f k8s/ingress.yaml
