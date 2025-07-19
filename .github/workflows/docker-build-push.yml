@@ -12,7 +12,7 @@ on:
 env:
   AWS_REGION: us-west-1 
   ECR_REPOSITORY_NAME: nodejs-eks-app-repository
-  IMAGE_TAG: ${{ github.sha }}
+  IMAGE_TAG: 1.0.0
 
 jobs:
   build-and-push:

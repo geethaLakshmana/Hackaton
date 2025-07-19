@@ -47,7 +47,7 @@ jobs:
       - name: Get ECR Image Tag (from previous workflow or current context)
         run: |
           echo "Using image tag: ${{ github.sha }}"
-          echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_ENV
+          echo "IMAGE_TAG=1.0.0" >> $GITHUB_ENV
 
       - name: Update Kubernetes deployment image
         run: |
