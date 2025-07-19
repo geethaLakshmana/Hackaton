@@ -5,38 +5,45 @@ on:
     branches:
       - main
     paths:
-      - 'k8s/**' 
+      - 'k8s/**'
       - '.github/workflows/kubernetes-deploy.yml'
   workflow_dispatch:
 
 env:
   AWS_REGION: us-west-1
-  EKS_CLUSTER_NAME: nodejs-eks-app-cluster
-  ECR_REPOSITORY_URL: 539935451710.dkr.ecr.us-west-1.amazonaws.com
+  EKS_CLUSTER_NAME: nodejs-eks-app-cluster # Ensure this matches your actual EKS cluster name
+  ECR_REPOSITORY_URL: 539935451710.dkr.ecr.us-west-1.amazonaws.com # Ensure this is correct
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
+      id-token: write # Keep this if you plan to switch to OIDC, otherwise 'id-token: none' is fine for static keys
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS Credentials and Kubeconfig
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          # Using AWS Access Key ID and Secret Access Key from GitHub Secrets.
+          # For best security, consider switching to IAM Roles for GitHub Actions (OIDC)
+          # as shown in the previous Terraform workflow example.
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+          # THIS IS THE KEY CHANGE: Provide the EKS cluster name here.
+          # This will automatically configure kubectl for you.
+          eks-cluster-name: ${{ env.EKS_CLUSTER_NAME }}
 
-      - name: Update Kubeconfig
-        uses: aws-actions/amazon-eks-kubeconfig@v2
-        with:
-          cluster-name: ${{ env.EKS_CLUSTER_NAME }}
-          
+      # REMOVE THE FOLLOWING STEP ENTIRELY:
+      # - name: Update Kubeconfig
+      #   uses: aws-actions/amazon-eks-kubeconfig@v2
+      #   with:
+      #     cluster-name: ${{ env.EKS_CLUSTER_NAME }}
+
       - name: Get ECR Image Tag (from previous workflow or current context)
         run: |
           echo "Using image tag: ${{ github.sha }}"
@@ -46,7 +53,7 @@ jobs:
         run: |
           sed -i "s|<ECR_REPOSITORY_URL>|${{ env.ECR_REPOSITORY_URL }}|g" k8s/deployment.yaml
           sed -i "s|<IMAGE_TAG>|${{ env.IMAGE_TAG }}|g" k8s/deployment.yaml
-          cat k8s/deployment.yaml
+          cat k8s/deployment.yaml # For debugging, review the modified deployment.yaml
 
       - name: Deploy to Kubernetes
         run: |
