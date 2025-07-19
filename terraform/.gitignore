@@ -1,0 +1,23 @@
+# Terraform generated files and directories
+.terraform/           # Terraform's working directory (contains plugins, modules cache)
+*.tfplan              # Saved plan files
+*.tfstate             # Local state file (CRITICAL: if using remote state, this is local and should always be ignored)
+*.tfstate.* # Backup local state files (e.g., .tfstate.backup, .tfstate.d)
+.terraformrc          # Local Terraform CLI configuration file
+terraform.rc          # Another common name for local Terraform CLI configuration
+crash.log             # Crash log files
+crash.*.log           # More general crash log files
+
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+
+.terraform_history
+
+.vscode/               # VS Code workspace settings, often includes .vscode/settings.json, .vscode/extensions.json
+.idea/                 # IntelliJ IDEA / WebStorm project files
+
+.DS_Store              # macOS folder metadata
+Thumbs.db              # Windows thumbnail cache
