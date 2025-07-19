@@ -1,0 +1,56 @@
+name: Kubernetes Deployment to EKS
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'k8s/**' 
+      - '.github/workflows/03-kubernetes-deploy.yml'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-west-1
+  EKS_CLUSTER_NAME: nodejs-eks-app-cluster
+  ECR_REPOSITORY_URL: 539935451710.dkr.ecr.us-west-1.amazonaws.com
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update Kubeconfig
+        uses: aws-actions/amazon-eks-kubeconfig@v2
+        with:
+          cluster-name: ${{ env.EKS_CLUSTER_NAME }}
+          
+      - name: Get ECR Image Tag (from previous workflow or current context)
+        run: |
+          echo "Using image tag: ${{ github.sha }}"
+          echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_ENV
+
+      - name: Update Kubernetes deployment image
+        run: |
+          sed -i "s|<ECR_REPOSITORY_URL>|${{ env.ECR_REPOSITORY_URL }}|g" k8s/deployment.yaml
+          sed -i "s|<IMAGE_TAG>|${{ env.IMAGE_TAG }}|g" k8s/deployment.yaml
+          cat k8s/deployment.yaml
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/ingress.yaml
+          echo "Kubernetes deployment applied successfully!"

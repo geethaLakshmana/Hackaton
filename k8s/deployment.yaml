@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: nodejs-app
-          image: 539935451710.dkr.ecr.us-west-1.amazonaws.com/nodejs-eks-app-repository:1.0.2
+          image: <ECR_REPOSITORY_URL>/nodejs-eks-app-repository:<IMAGE_TAG>
           ports:
             - containerPort: 3000
           resources:

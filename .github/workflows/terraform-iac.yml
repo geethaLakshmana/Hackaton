@@ -1,0 +1,110 @@
+name: Terraform IaC Workflow
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'terraform/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'terraform/**'
+  workflow_dispatch:
+    inputs:
+      terraform_command:
+        description: 'Terraform command to run (plan, apply, destroy)'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+      terraform_working_directory:
+        description: 'Subdirectory containing Terraform files'
+        required: true
+        default: 'terraform'
+
+env:
+  TF_VAR_aws_region: us-west-1
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    concurrency: terraform_ci_${{ github.workflow }}-${{ github.ref }}
+
+    permissions:
+      contents: read
+      pull-requests: write 
+      id-token: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.TF_VAR_aws_region }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: latest
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+        working-directory: ${{ github.event.inputs.terraform_working_directory || 'terraform' }}
+
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform fmt -check
+        working-directory: ${{ github.event.inputs.terraform_working_directory || 'terraform' }}
+        continue-on-error: true
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate
+        working-directory: ${{ github.event.inputs.terraform_working_directory || 'terraform' }}
+
+      - name: Terraform Plan (on PR or manual 'plan')
+        id: plan
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.terraform_command == 'plan')
+        run: terraform plan -no-color > terraform_plan.txt
+        working-directory: ${{ github.event.inputs.terraform_working_directory || 'terraform' }}
+
+      - name: Post Terraform Plan to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const planOutput = fs.readFileSync('terraform_plan.txt', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### Terraform Plan for #${context.issue.number}\n\n\`\`\`hcl\n${planOutput}\n\`\`\``
+            });
+        #working-directory: ${{ github.event.inputs.terraform_working_directory || 'terraform' }}
+
+      - name: Terraform Apply (on push to main or manual 'apply')
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.terraform_command == 'apply')
+        run: terraform apply -auto-approve
+        working-directory: ${{ github.event.inputs.terraform_working_directory || 'terraform' }}
+
+      - name: Terraform Destroy (manual 'destroy' only)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.terraform_command == 'destroy'
+        run: terraform destroy -auto-approve
+        working-directory: ${{ github.event.inputs.terraform_working_directory || 'terraform' }}
+
+      - name: Check for Failed Steps
+        if: failure() && (steps.fmt.outcome == 'failure' || steps.validate.outcome == 'failure' || steps.plan.outcome == 'failure' || steps.init.outcome == 'failure')
+        run: |
+          echo "::error::Terraform workflow failed. Please check previous step logs."
+          exit 1
